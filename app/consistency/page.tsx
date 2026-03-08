@@ -16,8 +16,6 @@ import { BackButton, TealButton, SecondaryButton, Card, PageShell } from "@/comp
 import { ProgressBar } from "@/components/ProgressBar";
 
 const ResponsiveContainer = dynamic(
-  () => import("recharts").then((m) => m.ResponsiveContainer),
-const ResponsiveContainer = dynamic(
   () => import("recharts").then((m) => m.ResponsiveContainer) as any,
   { ssr: false }
 );
@@ -43,11 +41,6 @@ const CartesianGrid = dynamic(
 );
 const Tooltip = dynamic(
   () => import("recharts").then((m) => m.Tooltip) as any,
-  { ssr: false }
-);
-);
-const Tooltip = dynamic(
-  () => import("recharts").then((m) => m.Tooltip),
   { ssr: false }
 );
 
