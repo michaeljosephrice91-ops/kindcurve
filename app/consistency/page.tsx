@@ -17,27 +17,34 @@ import { ProgressBar } from "@/components/ProgressBar";
 
 const ResponsiveContainer = dynamic(
   () => import("recharts").then((m) => m.ResponsiveContainer),
+const ResponsiveContainer = dynamic(
+  () => import("recharts").then((m) => m.ResponsiveContainer) as any,
   { ssr: false }
 );
 const LineChart = dynamic(
-  () => import("recharts").then((m) => m.LineChart),
+  () => import("recharts").then((m) => m.LineChart) as any,
   { ssr: false }
 );
 const Line = dynamic(
-  () => import("recharts").then((m) => m.Line),
+  () => import("recharts").then((m) => m.Line) as any,
   { ssr: false }
 );
 const XAxis = dynamic(
-  () => import("recharts").then((m) => m.XAxis),
+  () => import("recharts").then((m) => m.XAxis) as any,
   { ssr: false }
 );
 const YAxis = dynamic(
-  () => import("recharts").then((m) => m.YAxis),
+  () => import("recharts").then((m) => m.YAxis) as any,
   { ssr: false }
 );
 const CartesianGrid = dynamic(
-  () => import("recharts").then((m) => m.CartesianGrid),
+  () => import("recharts").then((m) => m.CartesianGrid) as any,
   { ssr: false }
+);
+const Tooltip = dynamic(
+  () => import("recharts").then((m) => m.Tooltip) as any,
+  { ssr: false }
+);
 );
 const Tooltip = dynamic(
   () => import("recharts").then((m) => m.Tooltip),
