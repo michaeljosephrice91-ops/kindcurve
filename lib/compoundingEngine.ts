@@ -66,8 +66,15 @@ export interface MonthlySnapshot {
   cumulative_donations: number;
   /** Cumulative impact to date */
   cumulative_impact: number;
+  /** Cumulative impact if the SAME giving had none of the compounding layers
+   *  (no annual increase, no stability bonus, no referral effect). */
+  cumulative_baseline_impact: number;
   /** Impact Efficiency Multiplier: cumulative_impact / cumulative_donations */
   iem: number;
+  /** Kind Score: cumulative_impact / cumulative_baseline_impact.
+   *  Starts at 1.0 and rises — isolates what consistency itself adds.
+   *  This is the signature metric, surfaced in the UI (never as "ROI"). */
+  kind_score: number;
   /** Per-charity impact breakdown this month */
   charity_impacts: CharityMonthImpact[];
 }
@@ -88,6 +95,8 @@ export interface EngineResult {
   total_donated_effective: number;
   total_impact: number;
   final_iem: number;
+  /** Final Kind Score (consistency multiplier over the whole horizon). */
+  final_kind_score: number;
   final_streak: number;
   /** Per-charity cumulative totals */
   charity_totals: CharityTotal[];
@@ -109,6 +118,8 @@ export interface YearlySummary {
   donated_effective: number;
   impact: number;
   iem: number;
+  /** Kind Score at the end of this year. */
+  kind_score: number;
   streak: number;
 }
 
@@ -145,59 +156,14 @@ export const DEFAULT_ENGINE_PARAMS: Omit<EngineParams, "monthly_amount"> = {
 };
 
 /**
- * Default impact profiles for charities without Supabase data.
- * These are conservative estimates. The report flags that these need
- * charity endorsement to be fully credible — for V1 they're clearly
- * labelled as estimates.
+ * Fallback impact figure used only if a charity profile arrives without one.
+ *
+ * Per-charity impact lives in lib/demoData.ts (THEME_IMPACT) — the demo
+ * charities are invented, so their impact figures are illustrative and kept
+ * there, in the open. The engine itself stays charity-agnostic.
  */
-export const DEFAULT_IMPACT_PROFILES: Record<string, { impact_per_pound: number; impact_unit: string }> = {
-  // Climate & Environment
-  "Cool Earth": { impact_per_pound: 0.004, impact_unit: "acres protected" },
-  "Rainforest Trust": { impact_per_pound: 0.005, impact_unit: "acres protected" },
-  "ClientEarth": { impact_per_pound: 0.1, impact_unit: "legal actions supported" },
-  "The Woodland Trust": { impact_per_pound: 0.02, impact_unit: "trees planted" },
-  "Friends of the Earth": { impact_per_pound: 0.1, impact_unit: "campaigns supported" },
-  "Surfers Against Sewage": { impact_per_pound: 0.1, impact_unit: "beach cleans supported" },
-
-  // Mental Health
-  "Mind": { impact_per_pound: 0.15, impact_unit: "support sessions" },
-  "Samaritans": { impact_per_pound: 0.2, impact_unit: "crisis calls supported" },
-  "Young Minds": { impact_per_pound: 0.15, impact_unit: "young people supported" },
-  "Mental Health Foundation": { impact_per_pound: 0.12, impact_unit: "people reached" },
-  "Rethink Mental Illness": { impact_per_pound: 0.15, impact_unit: "people supported" },
-
-  // Poverty & Basic Needs
-  "Shelter": { impact_per_pound: 0.1, impact_unit: "advice sessions" },
-  "Crisis": { impact_per_pound: 0.08, impact_unit: "people housed" },
-  "Centrepoint": { impact_per_pound: 0.1, impact_unit: "young people supported" },
-  "The Trussell Trust": { impact_per_pound: 0.3, impact_unit: "meals provided" },
-  "Action Against Hunger": { impact_per_pound: 0.25, impact_unit: "meals provided" },
-  "WaterAid": { impact_per_pound: 0.1, impact_unit: "people with clean water" },
-
-  // Children & Education
-  "Barnardo's": { impact_per_pound: 0.12, impact_unit: "children supported" },
-  "NSPCC": { impact_per_pound: 0.1, impact_unit: "children protected" },
-  "Save the Children": { impact_per_pound: 0.15, impact_unit: "children reached" },
-  "UNICEF UK": { impact_per_pound: 0.2, impact_unit: "children supported" },
-  "Malala Fund": { impact_per_pound: 0.08, impact_unit: "girls in education" },
-  "The Children's Society": { impact_per_pound: 0.12, impact_unit: "children helped" },
-
-  // Animals & Nature
-  "RSPCA": { impact_per_pound: 0.1, impact_unit: "animals helped" },
-  "Dogs Trust": { impact_per_pound: 0.08, impact_unit: "dogs cared for" },
-  "WWF": { impact_per_pound: 0.005, impact_unit: "hectares protected" },
-  "The Wildlife Trusts": { impact_per_pound: 0.01, impact_unit: "hectares managed" },
-  "Born Free Foundation": { impact_per_pound: 0.05, impact_unit: "animals protected" },
-  "Battersea Dogs & Cats Home": { impact_per_pound: 0.06, impact_unit: "animals rehomed" },
-
-  // Multi-theme
-  "Oxfam": { impact_per_pound: 0.15, impact_unit: "people helped" },
-  "British Red Cross": { impact_per_pound: 0.12, impact_unit: "people assisted" },
-  "Comic Relief": { impact_per_pound: 0.15, impact_unit: "lives changed" },
-
-  // Against Malaria Foundation (from report example)
-  "Against Malaria Foundation": { impact_per_pound: 0.5, impact_unit: "malaria nets" },
-};
+export const DEFAULT_IMPACT_PER_POUND = 0.15;
+export const DEFAULT_IMPACT_UNIT = "people supported";
 
 // ---------------------------------------------------------------------------
 // Deterministic pseudo-random for irregular giver simulation
@@ -242,14 +208,20 @@ export function runEngine(
   const giftAidMultiplier = gift_aid ? 1.25 : 1.0;
 
   // Ensure we have impact profiles for all charities
-  const enrichedCharities = charities.map((c) => {
-    const defaults = DEFAULT_IMPACT_PROFILES[c.name];
-    return {
-      ...c,
-      impact_per_pound: c.impact_per_pound || defaults?.impact_per_pound || 0.1,
-      impact_unit: c.impact_unit || defaults?.impact_unit || "impact units",
-    };
-  });
+  const enrichedCharities = charities.map((c) => ({
+    ...c,
+    impact_per_pound: c.impact_per_pound || DEFAULT_IMPACT_PER_POUND,
+    impact_unit: c.impact_unit || DEFAULT_IMPACT_UNIT,
+  }));
+
+  // Weighted impact-per-£ of the portfolio — used for the no-compounding baseline.
+  const weightedIpp = enrichedCharities.reduce(
+    (sum, c) => sum + c.impact_per_pound * (c.allocation_pct / 100),
+    0
+  );
+  // What ONE month of giving produces with no compounding layers at all
+  // (base amount, no annual increase, no streak bonus, no referral effect).
+  const baselineMonthlyImpact = monthly_amount * giftAidMultiplier * weightedIpp;
 
   // Cumulative per-charity tracking
   const charityCumulative: Record<string, number> = {};
@@ -261,6 +233,7 @@ export function runEngine(
   let streak = 0;
   let cumulativeDonations = 0;
   let cumulativeImpact = 0;
+  let cumulativeBaselineImpact = 0;
 
   // Deterministic regularity: use a pattern rather than randomness
   // regularity of 0.8 means donor gives 4 out of every 5 months
@@ -283,7 +256,12 @@ export function runEngine(
         impact: 0,
         cumulative_donations: cumulativeDonations,
         cumulative_impact: cumulativeImpact,
+        cumulative_baseline_impact: cumulativeBaselineImpact,
         iem: cumulativeDonations > 0 ? cumulativeImpact / cumulativeDonations : 0,
+        kind_score:
+          cumulativeBaselineImpact > 0
+            ? cumulativeImpact / cumulativeBaselineImpact
+            : 1,
         charity_impacts: enrichedCharities.map((c) => ({
           charity_id: c.charity_id || c.name,
           name: c.name,
@@ -335,6 +313,7 @@ export function runEngine(
 
     cumulativeDonations += donationEffective;
     cumulativeImpact += monthImpact;
+    cumulativeBaselineImpact += baselineMonthlyImpact;
 
     months.push({
       month: m,
@@ -347,7 +326,12 @@ export function runEngine(
       impact: monthImpact,
       cumulative_donations: cumulativeDonations,
       cumulative_impact: cumulativeImpact,
+      cumulative_baseline_impact: cumulativeBaselineImpact,
       iem: cumulativeDonations > 0 ? cumulativeImpact / cumulativeDonations : 0,
+      kind_score:
+        cumulativeBaselineImpact > 0
+          ? cumulativeImpact / cumulativeBaselineImpact
+          : 1,
       charity_impacts: charityImpacts,
     });
   }
@@ -381,6 +365,7 @@ export function runEngine(
       donated_effective: yearMonths.reduce((s, m) => s + m.donation_effective, 0),
       impact: yearMonths.reduce((s, m) => s + m.impact, 0),
       iem: lastMonth?.iem || 0,
+      kind_score: lastMonth?.kind_score || 1,
       streak: lastMonth?.streak || 0,
     });
   }
@@ -393,6 +378,7 @@ export function runEngine(
     total_donated_effective: cumulativeDonations,
     total_impact: cumulativeImpact,
     final_iem: lastMonth?.iem || 0,
+    final_kind_score: lastMonth?.kind_score || 1,
     final_streak: lastMonth?.streak || 0,
     charity_totals: charityTotals,
     yearly_summaries: yearly,
@@ -421,8 +407,7 @@ export function runIrregularComparison(
   // Average impact per pound across portfolio
   const avgImpactPerPound =
     charities.reduce((sum, c) => {
-      const defaults = DEFAULT_IMPACT_PROFILES[c.name];
-      const ipp = c.impact_per_pound || defaults?.impact_per_pound || 0.1;
+      const ipp = c.impact_per_pound || DEFAULT_IMPACT_PER_POUND;
       return sum + ipp * (c.allocation_pct / 100);
     }, 0);
 
@@ -467,91 +452,4 @@ export function runComparison(
       params.duration_months
     ),
   };
-}
-
-// ---------------------------------------------------------------------------
-// Chart data helpers (drop-in replacements for old impactProjection.ts)
-// ---------------------------------------------------------------------------
-
-/**
- * Generate projection data for the consistency page chart.
- * This replaces the old generateProjectionData() with real engine output.
- */
-export function generateProjectionData(
-  monthly_amount: number = 15,
-  charities: CharityImpactProfile[] = []
-): { year: number; kindCurve: number; irregular: number }[] {
-  // If no charities provided, use a default single-charity profile
-  const portfolioCharities =
-    charities.length > 0
-      ? charities
-      : [
-          {
-            charity_id: "default",
-            name: "Default",
-            allocation_pct: 100,
-            impact_per_pound: 0.15,
-            impact_unit: "impact units",
-          },
-        ];
-
-  const params: EngineParams = {
-    ...DEFAULT_ENGINE_PARAMS,
-    monthly_amount,
-  };
-
-  const comparison = runComparison(params, portfolioCharities);
-
-  // Return year-by-year for chart
-  return comparison.kindCurve.yearly_summaries.map((ys, i) => ({
-    year: ys.year,
-    kindCurve: Math.round(ys.impact * 100) / 100,
-    irregular: Math.round(
-      (comparison.irregular
-        .filter((m) => m.month > i * 12 && m.month <= (i + 1) * 12)
-        .reduce((s, m) => s + m.cumulative_impact, 0) /
-        Math.max(
-          1,
-          comparison.irregular.filter(
-            (m) => m.month > i * 12 && m.month <= (i + 1) * 12
-          ).length
-        )) *
-        100
-    ) / 100,
-  }));
-}
-
-/**
- * Generate sparkline data for the dashboard.
- * Replaces the old generateSparklineData() with real cumulative impact.
- */
-export function generateSparklineData(
-  monthly_amount: number = 15,
-  charities: CharityImpactProfile[] = []
-): { month: number; value: number }[] {
-  const portfolioCharities =
-    charities.length > 0
-      ? charities
-      : [
-          {
-            charity_id: "default",
-            name: "Default",
-            allocation_pct: 100,
-            impact_per_pound: 0.15,
-            impact_unit: "impact units",
-          },
-        ];
-
-  const params: EngineParams = {
-    ...DEFAULT_ENGINE_PARAMS,
-    monthly_amount,
-    duration_months: 12,
-  };
-
-  const result = runEngine(params, portfolioCharities);
-
-  return result.months.map((m) => ({
-    month: m.month,
-    value: Math.round(m.cumulative_impact * 100) / 100,
-  }));
 }

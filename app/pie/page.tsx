@@ -10,22 +10,11 @@ import { PIE_COLORS } from "@/lib/constants";
 import { BackButton, TealButton, Card, PageShell } from "@/components/ui/shared";
 import { ProgressBar } from "@/components/ProgressBar";
 
-const ResponsiveContainer = dynamic2(
-  () => import("recharts").then((m) => m.ResponsiveContainer),
-  { ssr: false }
-);
-const PieChart = dynamic2(
-  () => import("recharts").then((m) => m.PieChart),
-  { ssr: false }
-);
-const Pie = dynamic2(
-  () => import("recharts").then((m) => m.Pie),
-  { ssr: false }
-);
-const Cell = dynamic2(
-  () => import("recharts").then((m) => m.Cell),
-  { ssr: false }
-);
+// Lazy-load the whole donut as a single unit (see components/DonutChart.tsx
+// for why per-subcomponent dynamic imports break recharts).
+const DonutChart = dynamic2(() => import("@/components/DonutChart"), {
+  ssr: false,
+});
 
 function PiePageInner() {
   const [mounted, setMounted] = useState(false);
@@ -120,15 +109,7 @@ function PiePageInner() {
 
       <Card className="mb-4 !p-5 dark:!bg-[#0f172a] dark:!border-[#1e3a4a]">
         <div className="flex justify-center">
-          <ResponsiveContainer width={240} height={240}>
-            <PieChart>
-              <Pie data={pieData} innerRadius={70} outerRadius={100} paddingAngle={2} dataKey="value" stroke="none">
-                {pieData.map((e, i) => (
-                  <Cell key={i} fill={e.color} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+          <DonutChart data={pieData} size={240} />
         </div>
       </Card>
 

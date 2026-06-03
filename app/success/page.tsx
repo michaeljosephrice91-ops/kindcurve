@@ -1,47 +1,27 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CheckCircle, Sparkles } from "lucide-react";
 import { useKindCurveStore } from "@/lib/store";
 import {
   runEngine,
   DEFAULT_ENGINE_PARAMS,
-  DEFAULT_IMPACT_PROFILES,
-  type CharityImpactProfile,
   type EngineParams,
 } from "@/lib/compoundingEngine";
+import { buildCharityProfiles } from "@/lib/demoData";
 import { THEME_LABELS } from "@/lib/constants";
 import { KCLogo } from "@/components/KCLogo";
 import { TealButton, Card, PageShell } from "@/components/ui/shared";
 
 export default function SuccessPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id");
-  const { selectedThemes, charities, monthlyGift, reset } = useKindCurveStore();
-  const [confetti, setConfetti] = useState(false);
+  const { selectedThemes, charities, monthlyGift } = useKindCurveStore();
 
-  useEffect(() => {
-    // Trigger celebration animation
-    const timer = setTimeout(() => setConfetti(true), 600);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Build charity profiles for engine
-  const charityProfiles: CharityImpactProfile[] = useMemo(
-    () =>
-      charities.map((c: any) => {
-        const defaults = DEFAULT_IMPACT_PROFILES[c.name];
-        return {
-          charity_id: c.charity_id || c.name,
-          name: c.name,
-          allocation_pct: c.allocation,
-          impact_per_pound: defaults?.impact_per_pound || 0.1,
-          impact_unit: defaults?.impact_unit || "impact units",
-        };
-      }),
+  // Build engine-ready profiles from the user's portfolio + demo impact data.
+  const charityProfiles = useMemo(
+    () => buildCharityProfiles(charities),
     [charities]
   );
 
@@ -60,7 +40,7 @@ export default function SuccessPage() {
       topImpacts: result.charity_totals
         .sort((a, b) => b.total_impact - a.total_impact)
         .slice(0, 3),
-      fiveYearIEM: result.yearly_summaries[4]?.iem || 0,
+      fiveYearScore: result.yearly_summaries[4]?.kind_score || 1,
     };
   }, [monthlyGift, charityProfiles]);
 
@@ -184,13 +164,13 @@ export default function SuccessPage() {
                 </div>
               ))}
             </div>
-            {projections.fiveYearIEM > 1 && (
+            {projections.fiveYearScore > 1 && (
               <p className="text-[12px] text-gray-500 dark:text-gray-400 mt-3 pt-2 border-t border-kc-teal/10 dark:border-kc-teal/20">
-                By year 5, every £1 you give is projected to generate{" "}
+                By year 5, your consistency is projected to generate{" "}
                 <span className="font-semibold text-kc-teal dark:text-kc-cyan">
-                  £{projections.fiveYearIEM.toFixed(2)}
+                  {projections.fiveYearScore.toFixed(2)}×
                 </span>{" "}
-                of impact through consistency.
+                the impact of the same money given sporadically.
               </p>
             )}
           </Card>
