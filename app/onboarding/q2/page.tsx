@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MapPin, Globe, Scale } from "lucide-react";
-import { createClient } from "@/lib/supabaseClient";
 import { useKindCurveStore } from "@/lib/store";
 import { generatePortfolioFromDB } from "@/lib/portfolioGeneratorV2";
+import { getDemoCharities } from "@/lib/demoData";
 import { BackButton, PageShell } from "@/components/ui/shared";
 import { ProgressBar } from "@/components/ProgressBar";
 
@@ -20,17 +20,11 @@ export default function Q2Page() {
   const { selectedThemes, setScope, setCharities, setInitialCharities } =
     useKindCurveStore();
 
-  const handleSelect = async (value: "local" | "global" | "mix") => {
+  const handleSelect = (value: "local" | "global" | "mix") => {
     setScope(value);
-    const supabase = createClient();
 
-    // Fetch all charities from DB
-    const { data: allCharities } = await supabase
-      .from("charities")
-      .select("id, name, theme_id, geo, url")
-      .eq("active", true);
-
-    if (!allCharities) return;
+    // Local demo data — no network, no env vars.
+    const allCharities = getDemoCharities();
 
     // Generate portfolio
     const allocations = generatePortfolioFromDB(

@@ -1,31 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { createClient } from "@/lib/supabaseClient";
 import { KCLogo } from "@/components/KCLogo";
 import { TealButton, PageShell } from "@/components/ui/shared";
 
 export default function LandingPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
-      setLoading(false);
-    });
-  }, []);
 
   const handleStart = () => {
-    if (user) {
-      router.push("/onboarding/q1");
-    } else {
-      router.push("/onboarding/q1");
-    }
+    router.push("/onboarding/q1");
   };
 
   return (
@@ -73,29 +57,8 @@ export default function LandingPage() {
           transition={{ delay: 0.7 }}
           className="w-full"
         >
-          {!loading && (
-            <TealButton onClick={handleStart}>
-              {user ? "Continue your journey" : "Start your journey"}
-            </TealButton>
-          )}
+          <TealButton onClick={handleStart}>Start your journey</TealButton>
         </motion.div>
-
-        {!loading && !user && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="text-gray-400 dark:text-gray-500 text-sm mt-6"
-          >
-            Already have an account?{" "}
-            <button
-              onClick={() => router.push("/login")}
-              className="text-kc-teal dark:text-kc-cyan font-medium hover:underline"
-            >
-              Log in
-            </button>
-          </motion.p>
-        )}
 
         <motion.p
           initial={{ opacity: 0 }}

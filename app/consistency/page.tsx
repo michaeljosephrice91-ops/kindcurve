@@ -5,76 +5,30 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useKindCurveStore } from "@/lib/store";
 import {
-  runEngine,
   runComparison,
   DEFAULT_ENGINE_PARAMS,
-  DEFAULT_IMPACT_PROFILES,
-  type CharityImpactProfile,
   type EngineParams,
 } from "@/lib/compoundingEngine";
+import { buildCharityProfiles } from "@/lib/demoData";
 import { BackButton, TealButton, SecondaryButton, Card, PageShell } from "@/components/ui/shared";
 import { ProgressBar } from "@/components/ProgressBar";
 
-const ResponsiveContainer = dynamic(
-  () => import("recharts").then((m) => m.ResponsiveContainer) as any,
-  { ssr: false }
-);
-const LineChart = dynamic(
-  () => import("recharts").then((m) => m.LineChart) as any,
-  { ssr: false }
-);
-const Line = dynamic(
-  () => import("recharts").then((m) => m.Line) as any,
-  { ssr: false }
-);
-const XAxis = dynamic(
-  () => import("recharts").then((m) => m.XAxis) as any,
-  { ssr: false }
-);
-const YAxis = dynamic(
-  () => import("recharts").then((m) => m.YAxis) as any,
-  { ssr: false }
-);
-const CartesianGrid = dynamic(
-  () => import("recharts").then((m) => m.CartesianGrid) as any,
-  { ssr: false }
-);
-const Tooltip = dynamic(
-  () => import("recharts").then((m) => m.Tooltip) as any,
-  { ssr: false }
-);
+// Lazy-load the whole chart as one unit (see components/ImpactChart.tsx).
+const ImpactChart = dynamic(() => import("@/components/ImpactChart"), {
+  ssr: false,
+});
 
 export default function ConsistencyPage() {
   const router = useRouter();
   const { monthlyGift, charities } = useKindCurveStore();
 
-  // Build charity profiles from Zustand state + default impact data
-  const charityProfiles: CharityImpactProfile[] = useMemo(
-    () =>
-      charities.map((c) => {
-        const defaults = DEFAULT_IMPACT_PROFILES[c.name];
-        return {
-          charity_id: c.charity_id || c.name,
-          name: c.name,
-          allocation_pct: c.allocation,
-          impact_per_pound: defaults?.impact_per_pound || 0.1,
-          impact_unit: defaults?.impact_unit || "impact units",
-        };
-      }),
+  // Build engine-ready profiles from the user's portfolio + demo impact data.
+  const charityProfiles = useMemo(
+    () => buildCharityProfiles(charities),
     [charities]
   );
 
-  // Run the real engine
-  const engineResult = useMemo(() => {
-    const params: EngineParams = {
-      ...DEFAULT_ENGINE_PARAMS,
-      monthly_amount: monthlyGift,
-      duration_months: 120,
-    };
-    return runEngine(params, charityProfiles);
-  }, [monthlyGift, charityProfiles]);
-
-  // Run comparison for chart
+  // Run both the Kind Curve and irregular-giver simulations over 10 years.
   const comparison = useMemo(() => {
     const params: EngineParams = {
       ...DEFAULT_ENGINE_PARAMS,
@@ -84,21 +38,18 @@ export default function ConsistencyPage() {
     return runComparison(params, charityProfiles);
   }, [monthlyGift, charityProfiles]);
 
-  // Chart data: yearly cumulative impact comparison
+  const engineResult = comparison.kindCurve;
+
+  // Chart data: cumulative impact at each year-end. Both lines cumulative so
+  // the Kind Curve visibly pulls away from sporadic giving over time.
   const chartData = useMemo(() => {
     return engineResult.yearly_summaries.map((ys, i) => {
-      // Get irregular cumulative at end of each year
-      const irregularEndMonth = comparison.irregular[(i + 1) * 12 - 1];
+      const kcEndMonth = engineResult.months[Math.min((i + 1) * 12, engineResult.months.length) - 1];
+      const irrEndMonth = comparison.irregular[Math.min((i + 1) * 12, comparison.irregular.length) - 1];
       return {
-        year: `Year ${ys.year}`,
-        kindCurve: Math.round(ys.impact),
-        irregular: irregularEndMonth
-          ? Math.round(
-              comparison.irregular
-                .filter((m) => m.month > i * 12 && m.month <= (i + 1) * 12)
-                .reduce((s, m) => s + (m.active ? m.donation * 0.1 : 0), 0)
-            )
-          : 0,
+        year: `Yr ${ys.year}`,
+        kindCurve: Math.round(kcEndMonth?.cumulative_impact || 0),
+        irregular: Math.round(irrEndMonth?.cumulative_impact || 0),
       };
     });
   }, [engineResult, comparison]);
@@ -140,62 +91,7 @@ export default function ConsistencyPage() {
             Irregular giving
           </span>
         </div>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={chartData}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              className="stroke-gray-200 dark:stroke-gray-700"
-            />
-            <XAxis
-              dataKey="year"
-              className="text-[11px]"
-              stroke="#9ca3af"
-              tick={{ fontSize: 10, fill: "#9ca3af" }}
-            />
-            <YAxis
-              className="text-[11px]"
-              stroke="#9ca3af"
-              tick={{ fontSize: 10, fill: "#9ca3af" }}
-              label={{
-                value: "Impact",
-                angle: -90,
-                position: "insideLeft",
-                fill: "#9ca3af",
-                fontSize: 11,
-              }}
-            />
-            <Tooltip
-              contentStyle={{
-                borderRadius: 12,
-                fontSize: 13,
-                backgroundColor: "rgba(255,255,255,0.95)",
-              }}
-            />
-            <defs>
-              <linearGradient id="kcGrad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#267D91" />
-                <stop offset="100%" stopColor="#4BB78F" />
-              </linearGradient>
-            </defs>
-            <Line
-              type="monotone"
-              dataKey="kindCurve"
-              stroke="url(#kcGrad)"
-              strokeWidth={3}
-              dot={false}
-              name="Kind Curve"
-            />
-            <Line
-              type="monotone"
-              dataKey="irregular"
-              stroke="#d1d5db"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={false}
-              name="Irregular"
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <ImpactChart data={chartData} height={200} />
       </Card>
 
       <p className="text-center text-gray-400 dark:text-gray-500 text-[13px] mb-5">
@@ -248,12 +144,13 @@ export default function ConsistencyPage() {
             Consistency creates more from less
           </h4>
           <p className="text-gray-500 dark:text-gray-400 text-[13px] leading-relaxed">
-            By year 5, every £1 you give consistently is projected to generate{" "}
+            By year 5, your consistency is projected to generate{" "}
             <span className="text-kc-teal dark:text-kc-cyan font-semibold">
-              £{fiveYearSummary.iem.toFixed(2)}
+              {fiveYearSummary.kind_score.toFixed(2)}×
             </span>{" "}
-            of impact. That&apos;s because charities operate more efficiently with
-            predictable income, and your giving creates ripple effects over time.
+            the impact of giving the same money sporadically — because charities
+            operate more efficiently with predictable income, and your giving
+            creates ripple effects over time.
           </p>
         </Card>
       )}

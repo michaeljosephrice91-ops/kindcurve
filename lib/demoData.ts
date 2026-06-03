@@ -23,7 +23,33 @@ export interface DemoCharity {
   geo: "UK_LOCAL" | "UK_NATIONAL" | "GLOBAL";
   url: string;
   active: boolean;
+  /** Concrete impact produced per £1 donated. ILLUSTRATIVE — assumed, not empirical. */
+  impact_per_pound: number;
+  /** Human-readable unit for the impact above (e.g. "nights of shelter"). */
+  impact_unit: string;
 }
+
+/**
+ * Per-theme impact assumptions used to give the demo concrete, themed outcomes.
+ *
+ * These figures are ILLUSTRATIVE placeholders for the walkthrough — they are
+ * assumed for storytelling, NOT empirically derived or charity-endorsed. They
+ * are kept here, in the open, so the model stays fully inspectable.
+ *
+ * impact_per_pound ≈ 1 / (assumed cost per unit). e.g. a "night of shelter"
+ * assumed at ~£20 → 0.05 nights per £1.
+ */
+export const THEME_IMPACT: Record<string, { impact_per_pound: number; impact_unit: string }> = {
+  local_hardship: { impact_per_pound: 0.4,  impact_unit: "meals provided" },      // ~£2.50/meal
+  homelessness:   { impact_per_pound: 0.05, impact_unit: "nights of shelter" },   // ~£20/night
+  children:       { impact_per_pound: 0.2,  impact_unit: "school days funded" },  // ~£5/day
+  mental_health:  { impact_per_pound: 0.1,  impact_unit: "support sessions" },    // ~£10/session
+  domestic_abuse: { impact_per_pound: 0.04, impact_unit: "safe nights" },         // ~£25/night
+  climate:        { impact_per_pound: 1.0,  impact_unit: "trees planted" },       // ~£1/tree
+};
+
+/** Fallback used if a charity's theme has no impact mapping. */
+export const FALLBACK_IMPACT = { impact_per_pound: 0.15, impact_unit: "people supported" };
 
 export const DEMO_THEMES: DemoTheme[] = [
   { id: "local_hardship", label: "Local hardship",          icon: "Heart",         color: "#fb7185", sort_order: 1 },
@@ -34,7 +60,21 @@ export const DEMO_THEMES: DemoTheme[] = [
   { id: "climate",        label: "Climate & nature",        icon: "Leaf",          color: "#34d399", sort_order: 6 },
 ];
 
-export const DEMO_CHARITIES: DemoCharity[] = [
+/** Raw seed (without impact fields — those are derived from THEME_IMPACT below). */
+type RawCharity = Omit<DemoCharity, "impact_per_pound" | "impact_unit">;
+
+/**
+ * Geographic efficiency modifier (illustrative). Different delivery contexts
+ * produce different cost-per-unit, so two charities in the same theme can show
+ * slightly different impact-per-£. Kept explicit so the model is auditable.
+ */
+const GEO_EFFICIENCY: Record<DemoCharity["geo"], number> = {
+  UK_LOCAL: 1.15,    // lean, local delivery
+  UK_NATIONAL: 1.0,  // baseline
+  GLOBAL: 1.3,       // lower cost-per-unit in many contexts
+};
+
+const RAW_CHARITIES: RawCharity[] = [
   // local_hardship
   { id: "lh1", name: "Northgate Community Fund", theme_id: "local_hardship", geo: "UK_LOCAL",    url: "#", active: true },
   { id: "lh2", name: "The Doorstep Trust",       theme_id: "local_hardship", geo: "UK_LOCAL",    url: "#", active: true },
@@ -84,7 +124,62 @@ export const DEMO_CHARITIES: DemoCharity[] = [
   { id: "cl6", name: "Blue Planet Coalition",    theme_id: "climate", geo: "GLOBAL",      url: "#", active: true },
 ];
 
+/** Full charity records with derived, illustrative impact figures attached. */
+export const DEMO_CHARITIES: DemoCharity[] = RAW_CHARITIES.map((c) => {
+  const themeImpact = THEME_IMPACT[c.theme_id] ?? FALLBACK_IMPACT;
+  return {
+    ...c,
+    impact_per_pound: +(themeImpact.impact_per_pound * GEO_EFFICIENCY[c.geo]).toFixed(4),
+    impact_unit: themeImpact.impact_unit,
+  };
+});
+
+const DEMO_CHARITY_BY_ID: Record<string, DemoCharity> = Object.fromEntries(
+  DEMO_CHARITIES.map((c) => [c.id, c])
+);
+
 /** All active charities — drop-in replacement for the Supabase fetch in q2. */
 export function getDemoCharities(): DemoCharity[] {
   return DEMO_CHARITIES.filter((c) => c.active);
+}
+
+/** Look up the illustrative impact profile for a charity by its demo id. */
+export function impactForCharityId(
+  charity_id?: string
+): { impact_per_pound: number; impact_unit: string } {
+  const c = charity_id ? DEMO_CHARITY_BY_ID[charity_id] : undefined;
+  return c
+    ? { impact_per_pound: c.impact_per_pound, impact_unit: c.impact_unit }
+    : { ...FALLBACK_IMPACT };
+}
+
+/** A charity entry as held in the Zustand store. */
+export interface StoreCharity {
+  name: string;
+  allocation: number;
+  charity_id?: string;
+}
+
+/**
+ * Build engine-ready impact profiles from the user's stored portfolio.
+ * Single source of truth so every page (consistency, commit, success,
+ * dashboard) feeds the compounding engine identical, demo-data-driven figures.
+ */
+export function buildCharityProfiles(charities: StoreCharity[]): {
+  charity_id: string;
+  name: string;
+  allocation_pct: number;
+  impact_per_pound: number;
+  impact_unit: string;
+}[] {
+  return charities.map((c) => {
+    const impact = impactForCharityId(c.charity_id);
+    return {
+      charity_id: c.charity_id || c.name,
+      name: c.name,
+      allocation_pct: c.allocation,
+      impact_per_pound: impact.impact_per_pound,
+      impact_unit: impact.impact_unit,
+    };
+  });
 }

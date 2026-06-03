@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Heart, Brain, Leaf, GraduationCap, Home, Shield } from "lucide-react";
-import { createClient } from "@/lib/supabaseClient";
 import { useKindCurveStore } from "@/lib/store";
+import { DEMO_THEMES } from "@/lib/demoData";
 import { BackButton, TealButton, PageShell } from "@/components/ui/shared";
 import { ProgressBar } from "@/components/ProgressBar";
 
@@ -13,21 +12,11 @@ const ICON_MAP: Record<string, any> = {
   Heart, Brain, Leaf, GraduationCap, Home, Shield,
 };
 
+const themes = [...DEMO_THEMES].sort((a, b) => a.sort_order - b.sort_order);
+
 export default function Q1Page() {
   const router = useRouter();
   const { selectedThemes, setSelectedThemes } = useKindCurveStore();
-  const [themes, setThemes] = useState<any[]>([]);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from("themes")
-      .select("*")
-      .order("sort_order")
-      .then(({ data }) => {
-        if (data) setThemes(data);
-      });
-  }, []);
 
   const toggle = (key: string) => {
     if (selectedThemes.includes(key)) {
