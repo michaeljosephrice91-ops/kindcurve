@@ -45,7 +45,7 @@ export default function LandingPage() {
           transition={{ duration: 0.5 }}
           className="mb-7"
         >
-          <KCLogo size={78} />
+          <KCLogo size={96} />
         </motion.div>
 
         <motion.h1

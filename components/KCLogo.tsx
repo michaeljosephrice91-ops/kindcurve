@@ -1,97 +1,107 @@
 "use client";
 
+import { useId } from "react";
+
 /**
- * Kind Curve Logo — Nano Banana brand design.
+ * Kind Curve logomark.
  *
- * Three flowing curves form the K:
- * - Coral sweep (upper, left to right)
- * - Green sweep (upper, offset)
- * - Teal stem (vertical with upward diagonal)
- * - Cream arrowhead at the tip (growth/momentum)
+ * The mark IS the argument: one steady curve bending upward away from the
+ * flat line of the same money given in bursts. The widening gap between the
+ * two is the whole product in one shape — which is why it reads as a mark
+ * rather than as decoration, and why it still means something at 16px.
  *
- * The three coloured strokes represent the compounding layers:
- * teal (financial), coral (impact), green (behavioural).
+ * Teal → green along the curve (steady giving, compounding); the coral point
+ * is where it ends up.
  */
+
+type Variant = "colour" | "white" | "teal";
 
 interface KCLogoProps {
   size?: number;
   className?: string;
-  variant?: "colour" | "white" | "teal";
+  variant?: Variant;
 }
+
+const CURVE = "M14 80 C40 79 58 60 86 18";
+const BASELINE = "M14 80 H86";
 
 export function KCLogo({
   size = 60,
   className = "",
   variant = "colour",
 }: KCLogoProps) {
-  const colours = {
+  // Unique per instance: two logos on one page must not share a gradient id.
+  const gradientId = useId();
+
+  const palette = {
     colour: {
-      coral: "#E07060",
-      green: "#4BB78F",
-      teal: "#267D91",
-      arrow: "#FFF9EB",
+      from: "#267D91",
+      to: "#4BB78F",
+      baseline: "#CFC2AC",
+      point: "#E07060",
     },
     white: {
-      coral: "#ffffffdd",
-      green: "#ffffffcc",
-      teal: "#ffffff",
-      arrow: "#ffffff44",
+      from: "#ffffff",
+      to: "#ffffff",
+      baseline: "#ffffff59",
+      point: "#ffffff",
     },
     teal: {
-      coral: "#267D91aa",
-      green: "#267D91cc",
-      teal: "#267D91",
-      arrow: "#267D9144",
+      from: "#267D91",
+      to: "#267D91",
+      baseline: "#267D9140",
+      point: "#267D91",
     },
-  };
-
-  const c = colours[variant];
+  }[variant];
 
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 200 200"
+      viewBox="0 0 100 100"
       fill="none"
+      role="img"
+      aria-label="Kind Curve"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
     >
-      {/* Coral sweep — impact layer */}
+      <defs>
+        <linearGradient
+          id={gradientId}
+          x1="14"
+          y1="80"
+          x2="86"
+          y2="18"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop stopColor={palette.from} />
+          <stop offset="1" stopColor={palette.to} />
+        </linearGradient>
+      </defs>
+
+      {/* The same money, given in bursts. */}
       <path
-        d="M40 160C80 160 100 120 120 80C140 40 160 20 180 20"
-        stroke={c.coral}
-        strokeWidth="24"
+        d={BASELINE}
+        stroke={palette.baseline}
+        strokeWidth="6.5"
         strokeLinecap="round"
       />
-      {/* Green sweep — behavioural layer */}
+
+      {/* Given steadily. */}
       <path
-        d="M60 160C100 160 120 120 140 80C160 40 180 20 200 20"
-        stroke={c.green}
-        strokeWidth="24"
+        d={CURVE}
+        stroke={`url(#${gradientId})`}
+        strokeWidth="10.5"
         strokeLinecap="round"
       />
-      {/* Teal stem — financial layer */}
-      <path
-        d="M80 180V100C80 60 100 40 140 20"
-        stroke={c.teal}
-        strokeWidth="24"
-        strokeLinecap="round"
-      />
-      {/* Arrowhead — forward momentum */}
-      <path
-        d="M130 30L160 10L140 40"
-        stroke={c.arrow}
-        strokeWidth="12"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+
+      <circle cx="86" cy="18" r="6" fill={palette.point} />
     </svg>
   );
 }
 
 /**
- * Full logo lockup — logomark + "Kind Curve" wordmark.
- * For nav bars and headers.
+ * Logomark plus wordmark, set on one line. For headers and nav.
  */
 export function KCLogoLockup({
   height = 36,
@@ -100,25 +110,17 @@ export function KCLogoLockup({
 }: {
   height?: number;
   className?: string;
-  variant?: "colour" | "white" | "teal";
+  variant?: Variant;
 }) {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-2.5 ${className}`}>
       <KCLogo size={height} variant={variant} />
-      <div className="flex flex-col leading-none">
-        <span
-          className="font-bold tracking-tight text-gray-900 dark:text-gray-100"
-          style={{ fontSize: height * 0.4 }}
-        >
-          Kind
-        </span>
-        <span
-          className="font-bold tracking-tight text-gray-900 dark:text-gray-100"
-          style={{ fontSize: height * 0.4 }}
-        >
-          Curve
-        </span>
-      </div>
+      <span
+        className="font-semibold tracking-tight text-gray-900 dark:text-gray-100 whitespace-nowrap"
+        style={{ fontSize: height * 0.46 }}
+      >
+        Kind Curve
+      </span>
     </div>
   );
 }
