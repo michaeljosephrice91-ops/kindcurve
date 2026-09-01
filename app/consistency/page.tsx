@@ -12,6 +12,7 @@ import {
 import { buildCharityProfiles } from "@/lib/demoData";
 import { BackButton, TealButton, SecondaryButton, Card, PageShell } from "@/components/ui/shared";
 import { ProgressBar } from "@/components/ProgressBar";
+import { groupImpactByUnit, charityCountLabel } from "@/lib/impactSummary";
 
 // Lazy-load the whole chart as one unit (see components/ImpactChart.tsx).
 const ImpactChart = dynamic(() => import("@/components/ImpactChart"), {
@@ -54,12 +55,25 @@ export default function ConsistencyPage() {
     });
   }, [engineResult, comparison]);
 
-  // Top 3 charity impact projections for the "concrete outcomes" section
-  const topImpacts = useMemo(() => {
-    return engineResult.charity_totals
-      .filter((ct) => ct.total_impact > 0)
-      .sort((a, b) => b.total_impact - a.total_impact)
-      .slice(0, 3);
+  // Projected outcomes, grouped by impact unit (see lib/impactSummary.ts for
+  // why raw impact numbers are not ranked against each other).
+  const impactGroups = useMemo(() => {
+    const firstFiveYears = engineResult.months.filter((m) => m.month <= 60);
+    const fiveYearTotals = engineResult.charity_totals.map((ct) => {
+      // Impact AND money must be summed over the same window, or the card
+      // reports a 5-year outcome against a 10-year figure.
+      let impact = 0;
+      let donated = 0;
+      for (const m of firstFiveYears) {
+        const ci = m.charity_impacts.find((c) => c.charity_id === ct.charity_id);
+        if (ci) {
+          impact += ci.impact;
+          donated += ci.donation;
+        }
+      }
+      return { ...ct, total_impact: impact, total_donated: donated };
+    });
+    return groupImpactByUnit(fiveYearTotals);
   }, [engineResult]);
 
   // 5-year snapshot
@@ -99,40 +113,30 @@ export default function ConsistencyPage() {
       </p>
 
       {/* Concrete outcomes — powered by real engine */}
-      {topImpacts.length > 0 && (
+      {impactGroups.length > 0 && (
         <Card className="mb-3 !p-5 !bg-gradient-to-br !from-kc-teal/[0.06] !to-kc-cyan/[0.03] dark:!from-kc-teal/15 dark:!to-kc-cyan/8 !border-kc-teal/[0.12] dark:!border-kc-teal/25">
           <h4 className="text-[15px] font-semibold mb-3">
-            In 5 years, your Kind Curve is projected to:
+            In 5 years, your Kind Curve is projected to fund:
           </h4>
           <div className="space-y-2.5">
-            {topImpacts.map((ct) => {
-              // Get 5-year impact (months 1–60)
-              const fiveYearImpact = engineResult.months
-                .filter((m) => m.month <= 60)
-                .reduce(
-                  (sum, m) =>
-                    sum +
-                    (m.charity_impacts.find((ci) => ci.charity_id === ct.charity_id)
-                      ?.impact || 0),
-                  0
-                );
-              return (
-                <div
-                  key={ct.charity_id}
-                  className="flex items-baseline justify-between"
-                >
-                  <span className="text-sm text-gray-600 dark:text-gray-300">
-                    {ct.name}
-                  </span>
-                  <span className="text-sm font-semibold text-kc-teal dark:text-kc-cyan">
-                    ~{Math.round(fiveYearImpact)} {ct.impact_unit}
-                  </span>
-                </div>
-              );
-            })}
+            {impactGroups.map((g) => (
+              <div
+                key={g.impact_unit}
+                className="flex items-baseline justify-between gap-3"
+              >
+                <span className="text-sm text-gray-600 dark:text-gray-300">
+                  {charityCountLabel(g.charity_count)} · £
+                  {Math.round(g.total_donated).toLocaleString()}
+                </span>
+                <span className="text-sm font-semibold text-kc-teal dark:text-kc-cyan text-right">
+                  ~{Math.round(g.total_impact).toLocaleString()} {g.impact_unit}
+                </span>
+              </div>
+            ))}
           </div>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-3">
-            Estimates based on published charity impact data. Not a guarantee.
+          <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-3 pt-2 border-t border-kc-teal/10 dark:border-kc-teal/20">
+            Grouped by outcome type. Units are not comparable to each other, so
+            these are not ranked. Illustrative assumptions, not a guarantee.
           </p>
         </Card>
       )}

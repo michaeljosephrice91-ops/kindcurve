@@ -13,6 +13,7 @@ import {
 } from "@/lib/compoundingEngine";
 import { buildCharityProfiles } from "@/lib/demoData";
 import { THEME_LABELS } from "@/lib/constants";
+import { groupImpactByUnit, charityCountLabel } from "@/lib/impactSummary";
 import { KCLogo } from "@/components/KCLogo";
 import { TealButton, Card, PageShell } from "@/components/ui/shared";
 
@@ -283,17 +284,17 @@ export default function DashboardPage() {
         <Card className="mb-4 !p-5">
           <h3 className="text-[15px] font-semibold mb-3">Projected impact (10 years)</h3>
           <div className="space-y-2">
-            {result.charity_totals
-              .slice()
-              .sort((a, b) => b.total_impact - a.total_impact)
-              .map((ct) => (
-                <div key={ct.charity_id} className="flex items-center justify-between py-1">
-                  <span className="text-sm text-gray-600 dark:text-gray-300 truncate mr-3">{ct.name}</span>
-                  <span className="text-sm font-semibold text-kc-teal dark:text-kc-cyan whitespace-nowrap">
-                    ~{Math.round(ct.total_impact).toLocaleString()} {ct.impact_unit}
-                  </span>
-                </div>
-              ))}
+            {groupImpactByUnit(result.charity_totals).map((g) => (
+              <div key={g.impact_unit} className="flex items-center justify-between py-1 gap-3">
+                <span className="text-sm text-gray-600 dark:text-gray-300 truncate mr-3">
+                  {charityCountLabel(g.charity_count)} · £
+                  {Math.round(g.total_donated).toLocaleString()}
+                </span>
+                <span className="text-sm font-semibold text-kc-teal dark:text-kc-cyan whitespace-nowrap">
+                  ~{Math.round(g.total_impact).toLocaleString()} {g.impact_unit}
+                </span>
+              </div>
+            ))}
           </div>
           <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-3 border-t border-[#f0ebe0] dark:border-kc-border pt-2">
             Illustrative figures — assumed for the demo, not a guarantee of outcomes.

@@ -12,6 +12,7 @@ import {
 } from "@/lib/compoundingEngine";
 import { buildCharityProfiles } from "@/lib/demoData";
 import { THEME_LABELS } from "@/lib/constants";
+import { groupImpactByUnit, charityCountLabel } from "@/lib/impactSummary";
 import { KCLogo } from "@/components/KCLogo";
 import { TealButton, Card, PageShell } from "@/components/ui/shared";
 
@@ -37,9 +38,7 @@ export default function SuccessPage() {
     return {
       yearOne: result.yearly_summaries[0],
       yearFive: result.yearly_summaries[4],
-      topImpacts: result.charity_totals
-        .sort((a, b) => b.total_impact - a.total_impact)
-        .slice(0, 3),
+      impactGroups: groupImpactByUnit(result.charity_totals),
       fiveYearScore: result.yearly_summaries[4]?.kind_score || 1,
     };
   }, [monthlyGift, charityProfiles]);
@@ -139,7 +138,7 @@ export default function SuccessPage() {
       </motion.div>
 
       {/* Projected concrete impact */}
-      {projections && projections.topImpacts.length > 0 && (
+      {projections && projections.impactGroups.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -149,17 +148,18 @@ export default function SuccessPage() {
             <div className="flex items-center gap-2 mb-2.5">
               <Sparkles size={16} className="text-kc-teal dark:text-kc-cyan" />
               <h4 className="text-[14px] font-semibold">
-                In 5 years, your Kind Curve is projected to:
+                In 5 years, your Kind Curve is projected to fund:
               </h4>
             </div>
             <div className="space-y-2">
-              {projections.topImpacts.map((ct) => (
-                <div key={ct.charity_id} className="flex justify-between text-sm">
+              {projections.impactGroups.map((g) => (
+                <div key={g.impact_unit} className="flex justify-between gap-3 text-sm">
                   <span className="text-gray-600 dark:text-gray-300">
-                    {ct.name}
+                    {charityCountLabel(g.charity_count)} · £
+                    {Math.round(g.total_donated).toLocaleString()}
                   </span>
-                  <span className="font-semibold text-kc-teal dark:text-kc-cyan">
-                    ~{Math.round(ct.total_impact)} {ct.impact_unit}
+                  <span className="font-semibold text-kc-teal dark:text-kc-cyan text-right">
+                    ~{Math.round(g.total_impact).toLocaleString()} {g.impact_unit}
                   </span>
                 </div>
               ))}

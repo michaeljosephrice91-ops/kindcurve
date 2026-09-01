@@ -8,6 +8,7 @@ import { useKindCurveStore } from "@/lib/store";
 import { runEngine, DEFAULT_ENGINE_PARAMS, type EngineParams } from "@/lib/compoundingEngine";
 import { buildCharityProfiles } from "@/lib/demoData";
 import { THEME_LABELS } from "@/lib/constants";
+import { groupImpactByUnit, charityCountLabel } from "@/lib/impactSummary";
 import { KCLogo } from "@/components/KCLogo";
 import { BackButton, TealButton, Card, PageShell } from "@/components/ui/shared";
 import { ProgressBar } from "@/components/ProgressBar";
@@ -35,9 +36,7 @@ export default function CommitPage() {
       duration_months: 12,
       gift_aid: false, // already folded into effectiveMonthly
     };
-    return runEngine(params, charityProfiles)
-      .charity_totals.sort((a, b) => b.total_impact - a.total_impact)
-      .slice(0, 3);
+    return groupImpactByUnit(runEngine(params, charityProfiles).charity_totals);
   }, [effectiveMonthly, charityProfiles]);
 
   const handleConfirm = () => {
@@ -174,11 +173,14 @@ export default function CommitPage() {
               Your projected year 1 impact
             </h4>
             <div className="space-y-1.5">
-              {yearOneImpact.map((ct) => (
-                <div key={ct.charity_id} className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">{ct.name}</span>
-                  <span className="font-semibold text-kc-teal dark:text-kc-cyan">
-                    ~{Math.round(ct.total_impact)} {ct.impact_unit}
+              {yearOneImpact.map((g) => (
+                <div key={g.impact_unit} className="flex justify-between gap-3 text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {charityCountLabel(g.charity_count)} · £
+                    {Math.round(g.total_donated).toLocaleString()}
+                  </span>
+                  <span className="font-semibold text-kc-teal dark:text-kc-cyan text-right">
+                    ~{Math.round(g.total_impact).toLocaleString()} {g.impact_unit}
                   </span>
                 </div>
               ))}
