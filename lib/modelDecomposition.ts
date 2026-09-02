@@ -20,7 +20,7 @@ import {
  * is which before being asked to believe a total.
  */
 
-export type Provenance = "statutory" | "donor" | "directional" | "assumed";
+export type Provenance = "statutory" | "donor" | "directional" | "declined";
 
 export interface Layer {
   key: string;
@@ -48,7 +48,7 @@ export const PROVENANCE_LABEL: Record<Provenance, string> = {
   statutory: "Statutory",
   donor: "Set by the donor",
   directional: "Evidenced in direction, assumed in size",
-  assumed: "Assumed",
+  declined: "Available, not claimed",
 };
 
 export const PROVENANCE_NOTE: Record<Provenance, string> = {
@@ -56,7 +56,8 @@ export const PROVENANCE_NOTE: Record<Provenance, string> = {
   donor: "A decision the donor makes, not a claim about the world.",
   directional:
     "The effect is well documented; the number attached to it here is not.",
-  assumed: "No evidence base. Included because it is plausible, not because it is shown.",
+  declined:
+    "Modelled but set to zero. Plausible is not the same as shown, so it is not counted.",
 };
 
 function scoreAt(
@@ -127,10 +128,10 @@ export function decompose(
       {
         key: "network",
         label: "Network effect",
-        claim: "Long-term donors bring other donors in.",
+        claim: "Long-term donors bring other donors in. Kind Curve does not count this.",
         contribution: sNetwork - sStability,
-        provenance: "assumed",
-        test: "Requires a live referral rate from real users. Cannot be known before launch.",
+        provenance: "declined",
+        test: "Would need a live referral rate from real donors, which cannot exist before launch. Left at zero rather than assumed — it would have added roughly 0.04x, the least of any layer, on the weakest evidence.",
       },
     ],
   };

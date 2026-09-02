@@ -153,8 +153,8 @@ export default function ConsistencyPage() {
               {fiveYearSummary.kind_score.toFixed(2)}×
             </span>{" "}
             the impact of giving the same money sporadically — because charities
-            operate more efficiently with predictable income, and your giving
-            creates ripple effects over time.
+            operate more efficiently with predictable income, and much of what
+            your giving funds keeps working after the month it was paid for.
           </p>
           <button
             onClick={() => router.push("/model")}

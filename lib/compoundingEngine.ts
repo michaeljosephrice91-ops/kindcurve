@@ -149,7 +149,15 @@ export const DEFAULT_ENGINE_PARAMS: Omit<EngineParams, "monthly_amount"> = {
   stability_bonus_per_month: 0.01,
   referral_lag_months: 12,
   referral_rate: 0.05,
-  network_strength: 0.3,
+  /**
+   * Deliberately zero. The engine can model a referral effect, and decomposing
+   * the score showed it would add only ~0.04x over five years — the least of
+   * any layer, resting on the only claim with no evidence base at all. Claiming
+   * it buys almost nothing and costs the most attackable number in the model,
+   * so Kind Curve does not count it until there is a real referral rate to
+   * measure. Set above zero only when that data exists.
+   */
+  network_strength: 0,
   gift_aid: false,
   regularity: 1.0,
   duration_months: 120,

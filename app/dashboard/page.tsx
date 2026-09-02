@@ -351,7 +351,8 @@ export default function DashboardPage() {
               <p className="text-[13px] font-semibold mb-1">Why consistency matters</p>
               <p className="text-[12px] text-gray-500 dark:text-gray-400 leading-relaxed">
                 Charities operate more efficiently with predictable income, and
-                long-term donors become advocates who bring others in. Both effects
+                much of what giving funds keeps working after the month it was paid
+            for. Both effects
                 compound — which is why your steady giving is projected to do more
                 than the same money given in bursts.
               </p>

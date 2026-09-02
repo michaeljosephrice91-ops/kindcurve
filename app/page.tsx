@@ -102,6 +102,12 @@ export default function LandingPage() {
           <p className="text-gray-400 dark:text-gray-500 text-[13px] mt-3">
             Takes about two minutes.
           </p>
+          <button
+            onClick={() => router.push("/model")}
+            className="mt-4 text-[13px] text-kc-teal dark:text-kc-cyan underline underline-offset-2"
+          >
+            Or read how the numbers are built
+          </button>
         </motion.div>
 
         <motion.p

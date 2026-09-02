@@ -67,12 +67,20 @@ export function generatePortfolioFromDB(
   const final = selected.slice(0, 8);
   if (final.length === 0) return [];
 
-  const basePct = Math.floor(10000 / final.length) / 100;
-  const remainder = +(100 - basePct * final.length).toFixed(2);
+  // Weighted, not equal. An even split renders as identical slices, which makes
+  // the one screen that best demonstrates allocation look like nothing was
+  // allocated at all. These are a starting point the donor is meant to move.
+  const weights = final.map((_, i) => 1 / (i + 1.55));
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const raw = weights.map((w) => (w / totalWeight) * 100);
+
+  const rounded = raw.map((v) => Math.round(v * 10) / 10);
+  const drift = +(100 - rounded.reduce((a, b) => a + b, 0)).toFixed(1);
+  rounded[0] = +(rounded[0] + drift).toFixed(1);
 
   return final.map((charity, i) => ({
     charity_id: charity.id,
     charity_name: charity.name,
-    allocation_pct: i === 0 ? +(basePct + remainder).toFixed(2) : basePct,
+    allocation_pct: rounded[i],
   }));
 }

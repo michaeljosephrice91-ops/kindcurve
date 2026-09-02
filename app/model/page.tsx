@@ -28,14 +28,14 @@ const LAYER_COLOUR: Record<string, string> = {
   base: "#267D91",
   uplift: "#4BB78F",
   stability: "#5FA8B8",
-  network: "#E07060",
+  network: "#b9ada0",
 };
 
 const PROVENANCE_STYLE: Record<Provenance, string> = {
   statutory: "bg-[#267D91]/10 text-[#1d5e6d] dark:bg-[#267D91]/25 dark:text-[#8fd0dd]",
   donor: "bg-[#4BB78F]/12 text-[#2c7a5f] dark:bg-[#4BB78F]/25 dark:text-[#8fe0c2]",
   directional: "bg-[#C9A87C]/20 text-[#7a5f38] dark:bg-[#C9A87C]/25 dark:text-[#e0c9a4]",
-  assumed: "bg-[#E07060]/12 text-[#9c4436] dark:bg-[#E07060]/25 dark:text-[#f0a99c]",
+  declined: "bg-gray-500/10 text-gray-500 dark:bg-gray-400/15 dark:text-gray-400",
 };
 
 /** A fallback portfolio so the page stands alone when opened from a link. */
@@ -185,7 +185,7 @@ export default function ModelPage() {
       <Card className="mb-3 !p-5 !bg-gradient-to-br !from-kc-teal/[0.06] !to-kc-cyan/[0.03] dark:!from-kc-teal/15 dark:!to-kc-cyan/8 !border-kc-teal/[0.12] dark:!border-kc-teal/25">
         <h3 className="text-[15px] font-semibold mb-2">If you believe none of it</h3>
         <p className="text-[13.5px] leading-relaxed text-gray-600 dark:text-gray-300">
-          Set both behavioural effects to zero and the score is{" "}
+          Set the remaining behavioural effect to zero and the score is{" "}
           <span className="font-semibold text-kc-teal dark:text-kc-cyan tabular-nums">
             {model.floor.toFixed(2)}×
           </span>
@@ -197,11 +197,11 @@ export default function ModelPage() {
           {speculative > 0 ? (
             <>
               is {Math.round((speculative / Math.max(lift, 0.0001)) * 100)}% of the
-              total lift and rests on the two claims below that we have not yet
-              proven.
+              total lift, and it rests entirely on one claim we have not yet
+              proven. We would rather you knew that than discovered it.
             </>
           ) : (
-            <>is what the behavioural claims are currently contributing: nothing.</>
+            <>is what the behavioural claim is currently contributing: nothing.</>
           )}
         </p>
       </Card>
@@ -295,11 +295,12 @@ export default function ModelPage() {
       <Card className="mb-4 !p-5">
         <h3 className="text-[15px] font-semibold mb-2">What we would have to prove</h3>
         <p className="text-[13.5px] leading-relaxed text-gray-600 dark:text-gray-300">
-          The efficiency claim is testable with charity partners today: cost per pound
-          raised against regular versus irregular income. The network claim is not
-          testable before launch — it needs a real referral rate from real donors. Both
-          are held separately here so neither can quietly inflate the other, and so a
-          reader can discount either one without discarding the whole model.
+          One claim, and it is testable with charity partners today: cost per pound
+          raised against regular versus irregular income. We also model a referral
+          effect and have set it to zero, because it cannot be measured before launch
+          and would have added roughly 0.04× on the weakest evidence in the model.
+          Counting it would have bought almost nothing and cost the most attackable
+          number on the page.
         </p>
         <p className="text-[12px] leading-relaxed text-gray-400 dark:text-gray-500 mt-3 pt-2.5 border-t border-[#f0ebe0] dark:border-kc-border">
           Impact-per-pound figures are illustrative assumptions for this demonstration
