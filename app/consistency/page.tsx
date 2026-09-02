@@ -105,7 +105,7 @@ export default function ConsistencyPage() {
             Irregular giving
           </span>
         </div>
-        <ImpactChart data={chartData} height={200} />
+        <ImpactChart data={chartData} height={280} />
       </Card>
 
       <p className="text-center text-gray-400 dark:text-gray-500 text-[13px] mb-5">
@@ -156,6 +156,12 @@ export default function ConsistencyPage() {
             operate more efficiently with predictable income, and your giving
             creates ripple effects over time.
           </p>
+          <button
+            onClick={() => router.push("/model")}
+            className="mt-3 text-[12.5px] text-kc-teal dark:text-kc-cyan underline underline-offset-2"
+          >
+            See how that number is built
+          </button>
         </Card>
       )}
 

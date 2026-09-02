@@ -180,6 +180,12 @@ export default function DashboardPage() {
             <span className="font-bold text-kc-purple">{fiveYearScore.toFixed(2)}×</span>{" "}
             the impact of giving the same money sporadically.
           </p>
+          <button
+            onClick={() => router.push("/model")}
+            className="mt-2.5 text-[12.5px] text-kc-purple underline underline-offset-2"
+          >
+            See how that number is built — and change the assumptions
+          </button>
         </Card>
       </motion.div>
 
