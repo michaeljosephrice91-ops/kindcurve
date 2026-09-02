@@ -3,18 +3,43 @@
 import { useId } from "react";
 
 /**
- * Kind Curve logomark.
+ * Kind Curve logomark — the allocation ring.
  *
- * The mark IS the argument: one steady curve bending upward away from the
- * flat line of the same money given in bursts. The widening gap between the
- * two is the whole product in one shape — which is why it reads as a mark
- * rather than as decoration, and why it still means something at 16px.
+ * Four arc segments of deliberately unequal length on one circle: a giving
+ * portfolio's split, and a wreath. Unequal is the point — an even ring would
+ * read as a progress spinner, and a rising line would read as a stock chart
+ * (both were tried and rejected).
  *
- * Teal → green along the curve (steady giving, compounding); the coral point
- * is where it ends up.
+ * DRAWING NOTE: round caps extend each segment by half the stroke width at
+ * BOTH ends, so a dash sized to the arc you want overlaps its neighbour by
+ * (strokeWidth - gap). Dashes are therefore sized as visibleArc - strokeWidth
+ * and the offset shifted by strokeWidth / 2. Getting this wrong smears the
+ * joins and is invisible until you look closely.
+ *
+ * Interim mark: a specialist is redrawing this from the brief.
  */
 
 type Variant = "colour" | "white" | "teal";
+
+const R = 34;
+const STROKE = 11;
+const GAP = 4.5;
+const CIRCUMFERENCE = 2 * Math.PI * R;
+const WEIGHTS = [60, 40, 28, 20];
+const COLOURS = ["#267D91", "#4BB78F", "#E07060", "#5FA8B8"];
+
+/** [dashLength, dashOffset] per segment, with round caps accounted for. */
+const SEGMENTS = (() => {
+  const usable = CIRCUMFERENCE - GAP * WEIGHTS.length;
+  const scale = usable / WEIGHTS.reduce((a, b) => a + b, 0);
+  let cursor = 0;
+  return WEIGHTS.map((w) => {
+    const visible = w * scale;
+    const seg = { dash: visible - STROKE, offset: cursor + STROKE / 2 };
+    cursor += visible + GAP;
+    return seg;
+  });
+})();
 
 interface KCLogoProps {
   size?: number;
@@ -22,37 +47,15 @@ interface KCLogoProps {
   variant?: Variant;
 }
 
-const CURVE = "M14 80 C40 79 58 60 86 18";
-const BASELINE = "M14 80 H86";
-
 export function KCLogo({
   size = 60,
   className = "",
   variant = "colour",
 }: KCLogoProps) {
-  // Unique per instance: two logos on one page must not share a gradient id.
-  const gradientId = useId();
+  const uid = useId(); // two logos on a page must not share ids
 
-  const palette = {
-    colour: {
-      from: "#267D91",
-      to: "#4BB78F",
-      baseline: "#CFC2AC",
-      point: "#E07060",
-    },
-    white: {
-      from: "#ffffff",
-      to: "#ffffff",
-      baseline: "#ffffff59",
-      point: "#ffffff",
-    },
-    teal: {
-      from: "#267D91",
-      to: "#267D91",
-      baseline: "#267D9140",
-      point: "#267D91",
-    },
-  }[variant];
+  const strokeFor = (i: number) =>
+    variant === "white" ? "#ffffff" : variant === "teal" ? "#267D91" : COLOURS[i];
 
   return (
     <svg
@@ -64,38 +67,23 @@ export function KCLogo({
       aria-label="Kind Curve"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      data-uid={uid}
     >
-      <defs>
-        <linearGradient
-          id={gradientId}
-          x1="14"
-          y1="80"
-          x2="86"
-          y2="18"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stopColor={palette.from} />
-          <stop offset="1" stopColor={palette.to} />
-        </linearGradient>
-      </defs>
-
-      {/* The same money, given in bursts. */}
-      <path
-        d={BASELINE}
-        stroke={palette.baseline}
-        strokeWidth="6.5"
-        strokeLinecap="round"
-      />
-
-      {/* Given steadily. */}
-      <path
-        d={CURVE}
-        stroke={`url(#${gradientId})`}
-        strokeWidth="10.5"
-        strokeLinecap="round"
-      />
-
-      <circle cx="86" cy="18" r="6" fill={palette.point} />
+      {SEGMENTS.map((s, i) => (
+        <circle
+          key={i}
+          cx="50"
+          cy="50"
+          r={R}
+          fill="none"
+          stroke={strokeFor(i)}
+          strokeWidth={STROKE}
+          strokeLinecap="round"
+          strokeDasharray={`${s.dash.toFixed(2)} ${(CIRCUMFERENCE - s.dash).toFixed(2)}`}
+          strokeDashoffset={(-s.offset).toFixed(2)}
+          transform="rotate(-90 50 50)"
+        />
+      ))}
     </svg>
   );
 }

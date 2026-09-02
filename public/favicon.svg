@@ -1,11 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <defs>
-    <linearGradient id="kc" x1="14" y1="80" x2="86" y2="18" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#267D91"/>
-      <stop offset="1" stop-color="#4BB78F"/>
-    </linearGradient>
-  </defs>
-  <path d="M14 80 H86" stroke="#CFC2AC" stroke-width="6.5" stroke-linecap="round"/>
-  <path d="M14 80 C40 79 58 60 86 18" stroke="url(#kc)" stroke-width="10.5" stroke-linecap="round"/>
-  <circle cx="86" cy="18" r="6" fill="#E07060"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="34" fill="none" stroke="#267D91" stroke-width="11" stroke-linecap="round" stroke-dasharray="68.31 145.32" stroke-dashoffset="-5.50" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="34" fill="none" stroke="#4BB78F" stroke-width="11" stroke-linecap="round" stroke-dasharray="41.87 171.76" stroke-dashoffset="-89.31" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="34" fill="none" stroke="#E07060" stroke-width="11" stroke-linecap="round" stroke-dasharray="26.01 187.62" stroke-dashoffset="-146.68" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="34" fill="none" stroke="#5FA8B8" stroke-width="11" stroke-linecap="round" stroke-dasharray="15.44 198.19" stroke-dashoffset="-188.19" transform="rotate(-90 50 50)"/></svg>
